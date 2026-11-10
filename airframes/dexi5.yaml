@@ -16,3 +16,6 @@ params:
   EKF2_MAG_TYPE: 5        # no magnetometer; heading comes from the tag
   COM_LOW_BAT_ACT: 0      # warn only; a tethered supply must not trigger a battery failsafe
   COM_FLT_TIME_MAX: -1    # no flight-time limit
+  # Recommended after the 2026-11-10 run, not yet applied (add once set on the aircraft):
+  # BAT1_CAPACITY: -1     # tethered: battery estimate from voltage only
+  # MPC_THR_HOVER: 0.16   # measured hover throttle

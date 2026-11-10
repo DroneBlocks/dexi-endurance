@@ -12,9 +12,9 @@ ESC and companion temperatures, and companion CPU and memory should all stay fla
 
 | Run | Airframe | Power | Time in hold | Tag error mean / p95 | Height hold | Report |
 |---|---|---|---|---|---|---|
-| [2026-11-10](runs/2026-11-10_dexi5_tag0/) | DEXI-5 | 24 V external supply | in progress | 8.4 / 16.5 cm | 1.24 m ±0.6 cm | [report](runs/2026-11-10_dexi5_tag0/report.html) |
+| [2026-11-10](runs/2026-11-10_dexi5_tag0/) | DEXI-5 | 24 V external supply | **4 h 03 min** | 8.4 / 16.5 cm | 1.25 m ±0.7 cm, 0 resets | [report](runs/2026-11-10_dexi5_tag0/report.html) |
 
-Next target: 4 hours on the DEXI-5.
+Next target: 6 hours on the DEXI-5.
 
 ## Running a test
 

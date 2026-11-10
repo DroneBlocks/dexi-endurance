@@ -1,0 +1,12 @@
+<h2>Flight controller log</h2>
+<p class="muted">PX4 ULog from takeoff to 3 h 34 min, where the file reached the 2 GB ULog size limit. The companion logger above covers the whole flight.</p>
+<div class="wrap"><table><thead><tr><th>Check</th><th>Result</th><th>What it means</th></tr></thead><tbody>
+<tr><td>Vibration</td><td>accel p95 2.2 m/s², gyro p95 0.07 rad/s, 0 clipping on both IMUs</td><td>props and mounts healthy for the whole run</td></tr>
+<tr><td>Motor margin</td><td>no motor reached its limit</td><td>thrust margin in hand throughout</td></tr>
+<tr><td>Attitude tracking</td><td>0.5° error</td><td>the aircraft followed its commands</td></tr>
+<tr><td>Height estimate</td><td>innovation test ratio p95 0.01; rangefinder healthy 100% of the flight</td><td>height stayed consistent with the rangefinder the whole time</td></tr>
+<tr><td>Flight modes</td><td>Position, then Offboard to the end of the log; failsafe flag never set</td><td>no mode change the pilot did not command</td></tr>
+<tr><td>Hover throttle</td><td>measured 0.16; <code>MPC_THR_HOVER</code> is 0.22</td><td>the hover-thrust estimator corrected for it in flight; setting <code>MPC_THR_HOVER 0.16</code> starts each flight on the right value</td></tr>
+<tr><td>Accelerometer bias</td><td>X and Y learned at −0.34 m/s² at takeoff, 85% of the 0.4 m/s² limit; Y walked to +0.11 over the run</td><td>little margin left before the bias clamps; recalibrate the accelerometer on a level surface before the next run</td></tr>
+<tr><td>Battery estimate</td><td>PX4's estimate reached 0% at about 45 min (26.7 Ah counted against a 4.0 Ah pack); low, critical and emergency warnings raised</td><td>no action taken because <code>COM_LOW_BAT_ACT</code> is 0. On a tethered run, set <code>BAT1_CAPACITY</code> to −1 so the estimate follows voltage only</td></tr>
+</tbody></table></div>

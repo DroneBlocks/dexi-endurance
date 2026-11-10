@@ -140,9 +140,10 @@ def build(run):
     ])
 
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    extra = (run / 'log_findings.html').read_text() if (run / 'log_findings.html').exists() else ''
     page = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="300">
+{'<meta http-equiv="refresh" content="300">' if (run / 'LIVE').exists() else ''}
 <title>DEXI-5 Endurance Hold</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -189,8 +190,8 @@ ul.setup li{{margin-bottom:4px}}
 <div class="meta">DEXI-5 · Endurance<br><b>Updated {now}</b></div></header>
 <main>
 <div class="kicker">Flight test · 24 V external supply</div>
-<h1>DEXI-5 holds over an AprilTag</h1>
-<p class="sub">Autonomous position hold over tag 0 in Offboard, started from the RC switch. Run started {start}; {len(fl)} full minutes in the hold so far. The page refreshes every 5 minutes.</p>
+<h1>DEXI-5 holds over an AprilTag{'' if (run / 'LIVE').exists() or not air else f' for {int(air // 3600)} h {int(air % 3600 // 60):02d} min'}</h1>
+<p class="sub">Autonomous position hold over tag 0 in Offboard, started from the RC switch. Run started {start}; {len(fl)} full minutes in the hold{' so far. The page refreshes every 5 minutes' if (run / 'LIVE').exists() else ''}.</p>
 <div class="tiles">{''.join(f'<div class="tile"><b>{v}</b><span>{l}</span></div>' for v, l in tiles)}</div>
 
 <h2>Over the flight</h2>
@@ -205,7 +206,7 @@ ul.setup li{{margin-bottom:4px}}
 <div class="wrap"><table><thead><tr><th>Min</th><th>Clock</th><th>Tag error mean / p95 / max (cm)</th><th>Tag seen</th><th>Height (m) ±cm</th><th>Resets</th><th>EKF heading drift</th><th>Power</th><th>RPM M1 / M2 / M3 / M4</th><th>ESC max</th><th>CM4 CPU · mem · temp</th></tr></thead>
 <tbody>{''.join(tr1(r) for r in fl)}</tbody></table></div></details>
 
-<h2>Setup</h2>
+{extra}<h2>Setup</h2>
 <ul class="setup">
 <li><b>Aircraft:</b> DEXI-5 (ARK Pi6X + CM4), downward rangefinder and optical flow, no GPS, magnetometer off.</li>
 <li><b>Power:</b> external power supply set to 24.0 V, tethered to the aircraft (about 23.9 V at the flight controller under load). No battery is fitted, so the voltage stays flat and the power figure is what holding a hover costs.</li>
