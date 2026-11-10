@@ -1,0 +1,18 @@
+# DEXI-5 endurance profile: ARK Pi6X flight controller + CM4 companion.
+name: DEXI-5
+host: dexi-295d.local      # mDNS name of this aircraft; override with DEXI_HOST
+tag_nav_config: tag_nav_dexi5.yaml
+power: external supply, 24.0 V set point, tethered
+tag: {family: tag36h11, id: 0, size_in: 6}
+hold_height_m: 1.2
+
+# PX4 parameters the test depends on. preflight.sh fails on any mismatch.
+params:
+  RC_MAP_OFFB_SW: 7       # CH7 high = Offboard; entering Offboard starts the hold
+  EKF2_HGT_REF: 2         # rangefinder is the height reference
+  EKF2_RNG_CTRL: 2        # always fuse the rangefinder
+  EKF2_BARO_CTRL: 1       # barometer as backup; at 0 the EKF resets height every 5 s
+  EKF2_OF_CTRL: 1         # optical flow on
+  EKF2_MAG_TYPE: 5        # no magnetometer; heading comes from the tag
+  COM_LOW_BAT_ACT: 0      # warn only; a tethered supply must not trigger a battery failsafe
+  COM_FLT_TIME_MAX: -1    # no flight-time limit

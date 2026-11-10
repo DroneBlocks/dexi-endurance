@@ -1,0 +1,17 @@
+# DEXI-3 endurance profile. Values marked TODO must be measured on the aircraft
+# before a run; the expected PX4 values come from dexi-fc-params (src/dexi-3.json).
+name: DEXI-3
+host: TODO.local         # mDNS name of the aircraft (dexi-XXXX.local); override with DEXI_HOST
+tag_nav_config: tag_nav_dexi3.yaml   # TODO: create; camera mount offsets measured on the aircraft
+power: TODO (external supply set point, or battery: record capacity and cell count)
+tag: {family: tag36h11, id: 0, size_in: 6}
+hold_height_m: 1.2
+
+params:
+  RC_MAP_OFFB_SW: 7
+  EKF2_HGT_REF: 2
+  EKF2_RNG_CTRL: 2
+  EKF2_BARO_CTRL: 1
+  EKF2_OF_CTRL: 1
+  COM_LOW_BAT_ACT: 0      # tethered runs only; leave the dexi-fc-params value for battery runs
+  COM_FLT_TIME_MAX: -1
