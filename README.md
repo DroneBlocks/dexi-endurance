@@ -84,3 +84,7 @@ release named after the run, and `notes.md` links to it.
   itself uses about 17% of the CM4, which is included in the figure.
 - **Height resets** counts EKF height resets per minute. It should be 0 in the hold; a reset
   every 5 s means the barometer is off with the rangefinder as height reference.
+- **Flight controller logs stop at 2 GB per file.** With `SDLOG_PROFILE 2067` that is about
+  3.5 h of flight: the ULog ends mid-flight and the rest goes unrecorded. The companion logger
+  is not affected. For runs longer than about 3.5 h, lower `SDLOG_PROFILE` before takeoff so
+  the whole flight fits in one ULog, and clear old logs from the SD card first.
