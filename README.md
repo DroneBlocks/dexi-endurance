@@ -52,7 +52,7 @@ Each run gets a folder `runs/<date>_<airframe>_<name>/` with:
 | `minutes.csv` | one row per minute: tag error, height, power, RPM, temperatures, CPU, memory |
 | `samples.csv` | one row per second, every field the logger reads |
 | `report.html` | built by `tools/build_report.py` |
-| `params.txt` | every PX4 parameter as flown: `tools/params.py dump airframes/<airframe>.yaml` |
+| `params_vs_stock.md` | PX4 parameters that differ from the stock airframe, read from the flight controller log |
 | `notes.md` | airframe, firmware, `tag_nav` version, power set point, room, who flew, how it ended |
 
 The flight controller's ULog is too large for the repository. It is attached to a GitHub
@@ -69,6 +69,7 @@ release named after the run, and `notes.md` links to it.
 | `drone/hgt_watch.py` | 5 Hz EKF height against the rangefinder, with every EKF height-source change logged |
 | `drone/install.sh` | copies the above to the aircraft and starts them |
 | `tools/params.py` | dumps or checks PX4 parameters over MAVLink |
+| `tools/params_vs_stock.py` | lists the parameters in a flight log that differ from the stock airframe (needs a PX4 checkout) |
 | `tools/preflight.sh` | parameter check plus companion checks: services, PX4 data, `tag_nav` state, logger |
 | `tools/build_report.py` | builds `report.html` from a run's `minutes.csv` and `samples.csv` |
 

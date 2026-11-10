@@ -7,7 +7,7 @@
 | Power | external power supply set to 24.0 V, tethered; 23.9 V at the flight controller in the hold |
 | Tag | tag36h11 ID 0, 6 in print, on the floor |
 | `tag_nav` | `align_yaw` on, `hold_route_altitude` on, config `airframes/tag_nav_dexi5.yaml` |
-| PX4 parameters | profile values in `airframes/dexi5.yaml`, all checked `ok` by `tools/preflight.sh` before the run |
+| PX4 parameters | [differences from stock DEXI-5](params_vs_stock.md); profile values checked `ok` by `tools/preflight.sh` |
 | Armed | 18:36:17 to 22:40:27 companion clock, **4 h 04 min 10 s** |
 | In the Offboard hold | 18:36:31 to 22:40:17, **4 h 03 min 46 s** |
 | How it ended | pilot switched CH7 back to Position and landed |
@@ -59,5 +59,3 @@ Every measure was flat from about 20 minutes in to the end of the run.
 - The ULog stops at 2 GB. For runs longer than about 3.5 h, log fewer topics
   (`SDLOG_PROFILE`) or start a new log partway through, so the flight controller covers the
   whole flight.
-- `params.txt` was not captured for this run (the aircraft was powered off before the dump).
-  Capture it before power-off: `tools/params.py dump airframes/dexi5.yaml > params.txt`.
