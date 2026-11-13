@@ -58,7 +58,7 @@ class Logger(Node):
         self.tn = None; self.bat = None; self.lp = None; self.vs = None
         self.create_subscription(String, '/dexi/tag_nav/status', lambda m: setattr(self, 'tn', json.loads(m.data)), 10)
         self.create_subscription(BatteryStatus, '/fmu/out/battery_status', lambda m: setattr(self, 'bat', m), be)
-        self.create_subscription(VehicleLocalPosition, '/fmu/out/vehicle_local_position', lambda m: setattr(self, 'lp', m), be)
+        self.create_subscription(VehicleLocalPosition, '/fmu/out/vehicle_local_position_20hz', lambda m: setattr(self, 'lp', m), be)  # 20 Hz copy: the 100 Hz topic cost ~half a core in Python
         self.create_subscription(VehicleStatus, '/fmu/out/vehicle_status_v1', lambda m: setattr(self, 'vs', m), be)
         self.create_subscription(VehicleStatus, '/fmu/out/vehicle_status', lambda m: setattr(self, 'vs', m), be)
 
@@ -80,7 +80,7 @@ def main():
     rep.write(f'DEXI-5 endurance run {RUN} (tethered, hold over tag 0 via CH7 Offboard)\n'); rep.flush()
 
     t0 = time.time(); win = []; minute = 0; wh = 0.0; airborne_total = 0.0
-    hdg0 = None; ekf0 = None; last_t = t0
+    hdg0 = None; ekf0 = None; last_t = t0; thr = ''
     while True:
         tick = time.time()
         tn = n.tn or {}; b = n.bat; lp = n.lp; vs = n.vs
@@ -100,9 +100,12 @@ def main():
         et = [x / 100 for x in info.get('temperature', [0] * 4)][:4]
         eerr = sum(info.get('error_count', [0])) if info else 0
         load1 = os.getloadavg()[0]
-        temp = sh('vcgencmd measure_temp').replace("temp=", '').replace("'C", '')
-        thr = sh('vcgencmd get_throttled').replace('throttled=', '')
-        mem = sh("free | awk '/Mem:/{printf \"%.0f\", $3/$2*100}'")
+        temp = f"{int(open('/sys/class/thermal/thermal_zone0/temp').read()) / 1000:.1f}"
+        if int(tick) % 10 == 0 or not thr:      # vcgencmd forks a process: every 10 s is enough
+            thr = sh('vcgencmd get_throttled').replace('throttled=', '')
+        mi = dict(l.split(':', 1) for l in open('/proc/meminfo'))
+        kb = lambda k: int(mi[k].split()[0])
+        mem = f"{100 * (1 - kb('MemAvailable') / kb('MemTotal')):.0f}"
         row = dict(t=round(tick - t0, 1), clock=datetime.now().strftime('%H:%M:%S'), mode=mode, armed=int(armed),
                    tn_state=tn.get('state'), engaged=int(bool(tn.get('engaged'))), visible=int(bool(tn.get('visible'))),
                    off_fwd=f_, off_right=r_, err_m=None if err is None else round(err, 3),

@@ -3,17 +3,23 @@ name: DEXI-5
 host: dexi-295d.local      # mDNS name of this aircraft; override with DEXI_HOST
 tag_nav_config: tag_nav_dexi5.yaml
 power: external supply, 24.0 V set point, tethered
-tag: {family: tag36h11, id: 0, size_in: 6}
-hold_height_m: 1.2
+tag: {family: tag36h11, id: 0, size_m: 0.167}   # black square edge; the detector's size must match
+hold_height_m: 1.5
 
 # PX4 parameters the test depends on. preflight.sh fails on any mismatch.
 params:
   RC_MAP_OFFB_SW: 7       # CH7 high = Offboard; entering Offboard starts the hold
   EKF2_HGT_REF: 2         # rangefinder is the height reference
   EKF2_RNG_CTRL: 2        # always fuse the rangefinder
-  EKF2_BARO_CTRL: 1       # barometer as backup; at 0 the EKF resets height every 5 s
+  EKF2_BARO_CTRL: 1       # barometer as backup; at 0 the EKF resets height every 5 s (PX4 1.16 bug, fixed on main 14da9d13b5)
+  EKF2_BARO_NOISE: 15.0   # barometer barely weighted: prop wash reads +5 m at liftoff (replay 2026-11-12)
+  EKF2_TERR_NOISE: 0.5    # steady floor estimate so the rangefinder corrects height, not the floor
+  SDLOG_MODE: 2           # log from boot: logs that start at arm replay poorly
   EKF2_OF_CTRL: 1         # optical flow on
   EKF2_MAG_TYPE: 5        # no magnetometer; heading comes from the tag
+  COM_ARM_WO_GPS: 1       # arm without GPS; left at 0 after a GPS flight it denies arming
+  SYS_HAS_GPS: 0          # no GPS fitted
+  EKF2_GPS_CTRL: 0        # GPS fusion off
   COM_LOW_BAT_ACT: 0      # warn only; a tethered supply must not trigger a battery failsafe
   COM_FLT_TIME_MAX: -1    # no flight-time limit
   # Recommended after the 2026-11-10 run, not yet applied (add once set on the aircraft):
