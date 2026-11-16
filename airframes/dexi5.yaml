@@ -14,7 +14,9 @@ params:
   EKF2_BARO_CTRL: 1       # barometer as backup; at 0 the EKF resets height every 5 s (PX4 1.16 bug, fixed on main 14da9d13b5)
   EKF2_BARO_NOISE: 15.0   # barometer barely weighted: prop wash reads +5 m at liftoff (replay 2026-11-12)
   EKF2_TERR_NOISE: 0.5    # steady floor estimate so the rangefinder corrects height, not the floor
-  SDLOG_MODE: 2           # log from boot: logs that start at arm replay poorly
+  SDLOG_MODE: 1           # log from boot until disarm, then arm to disarm: the first log keeps the pre-arm data replay
+                          # needs, and each log closes on disarm so it downloads over MAVLink without pulling the card
+  SDLOG_PROFILE: 2051     # default + estimator replay + high-rate sensors (flow, rangefinder at full rate); dexi-gym #11, #30
   EKF2_OF_CTRL: 1         # optical flow on
   EKF2_MAG_TYPE: 5        # no magnetometer; heading comes from the tag
   COM_ARM_WO_GPS: 1       # arm without GPS; left at 0 after a GPS flight it denies arming
@@ -22,6 +24,21 @@ params:
   EKF2_GPS_CTRL: 0        # GPS fusion off
   COM_LOW_BAT_ACT: 0      # warn only; a tethered supply must not trigger a battery failsafe
   COM_FLT_TIME_MAX: -1    # no flight-time limit
+  # Attitude and rate gains from PX4 autotune, 2026-11-13, on the 6S 4000 mAh Li-ion pack (strapped tight).
+  # The stock 4601 airframe gains gave a pitch-only 8-9 Hz shake on battery. Diff: airframes/dexi5-tune.md
+  MC_ROLLRATE_P: 0.0498
+  MC_ROLLRATE_I: 0.0679
+  MC_PITCHRATE_P: 0.0482
+  MC_PITCHRATE_I: 0.0588
+  MC_PITCHRATE_D: 0.0005
+  MC_YAWRATE_P: 0.0808
+  MC_YAWRATE_I: 0.0868
+  MC_YAWRATE_D: 0.0001
+  MC_ROLL_P: 6.5
+  MC_PITCH_P: 6.5
+  # 6S Li-ion: PX4's warnings use these per-cell voltages (sag-corrected); low lands near a 3.3 V resting stop
+  BAT1_V_EMPTY: 3.2
+  BAT1_V_CHARGED: 4.15
   # Recommended after the 2026-11-10 run, not yet applied (add once set on the aircraft):
   # BAT1_CAPACITY: -1     # tethered: battery estimate from voltage only
   # MPC_THR_HOVER: 0.16   # measured hover throttle
