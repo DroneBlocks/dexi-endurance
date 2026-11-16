@@ -3,6 +3,7 @@
 
     tools/params.py dump  airframes/dexi5.yaml > runs/<run>/params.txt
     tools/params.py check airframes/dexi5.yaml          # exit 1 on any mismatch
+    tools/params.py set   airframes/dexi5.yaml          # write only the mismatched ones, then re-check
 
 Needs pymavlink and PyYAML. Host comes from DEXI_HOST or the profile's `host`.
 """
@@ -41,15 +42,32 @@ def dump(m):
         print(f'# WARNING: received {len(got)} of {total} parameters', file=sys.stderr)
 
 
-def get(m, name):
+def read(m, name):
     for _ in range(3):
         m.mav.param_request_read_send(m.target_system, 1, name.encode(), -1)
         end = time.time() + 1.5
         while time.time() < end:
             msg = m.recv_match(type='PARAM_VALUE', blocking=True, timeout=0.5)
             if msg and msg.param_id == name:
-                return value(msg)
+                return msg
     return None
+
+
+def get(m, name):
+    msg = read(m, name)
+    return value(msg) if msg else None
+
+
+def put(m, name, want):
+    """Write one parameter in the type the FC reports (INT32 goes bit-packed in the float)."""
+    msg = read(m, name)
+    if msg is None:
+        return False
+    raw = struct.unpack('<f', struct.pack('<i', int(want)))[0] if msg.param_type in INT_TYPES else float(want)
+    m.mav.param_set_send(m.target_system, 1, name.encode(), raw, msg.param_type)
+    time.sleep(0.3)
+    have = get(m, name)
+    return have is not None and abs(float(have) - float(want)) < 1e-4
 
 
 def check(m, expected):
@@ -63,11 +81,18 @@ def check(m, expected):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3 or sys.argv[1] not in ('dump', 'check'):
+    if len(sys.argv) != 3 or sys.argv[1] not in ('dump', 'check', 'set'):
         sys.exit(__doc__)
     profile = yaml.safe_load(open(sys.argv[2]))
     m = connect(profile)
     if sys.argv[1] == 'dump':
         dump(m)
+    elif sys.argv[1] == 'set':
+        for name, want in profile['params'].items():
+            have = get(m, name)
+            if have is None or abs(float(have) - float(want)) >= 1e-4:
+                print(f"{'set ' if put(m, name, want) else 'FAIL'} {name:18} {have!s:>8} -> {want}")
+        print('reboot the FC for logger and sensor changes (tools/reboot_fc.py)')
+        sys.exit(1 if check(m, profile['params']) else 0)
     else:
         sys.exit(1 if check(m, profile['params']) else 0)

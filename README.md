@@ -33,7 +33,7 @@ Needs `sshpass`, and Python with `pymavlink` and `PyYAML` on the laptop.
    ```bash
    tools/preflight.sh airframes/dexi5.yaml
    ```
-5. Take off in Position mode with tag 0 in the camera's view at about 1.2 m. Flip CH7 to
+5. Take off in Position mode with tag 0 in the camera's view at 1.5 m. Flip CH7 to
    Offboard: the aircraft centers on the tag, turns its nose to the tag's top edge, and holds.
    Flip CH7 back to take control at any time; flip it again to re-engage.
 6. During the run, copy the logs to the laptop and build the report:
@@ -42,6 +42,31 @@ Needs `sshpass`, and Python with `pymavlink` and `PyYAML` on the laptop.
    python3 tools/build_report.py runs/incoming/<start>
    ```
 7. After landing, record the run (see [Recording a run](#recording-a-run)).
+
+## Auto takeoff and land cycle
+
+`drone/tag_cycle.py` flies one cycle per CH7 flip: take off to 1.5 m, center on tag 0, hover
+10 s, land straight down on the tag. Install it in place of the hold hand-off:
+
+```bash
+HANDOFF=tag_cycle.py drone/install.sh airframes/dexi5.yaml
+```
+
+Arm in Position on the ground near the tag and flip CH7. For the next cycle, flip CH7 back to
+Position, re-arm and flip again. Flip back at any time to take over; the sticks do not override
+Offboard. It needs the EKF settings in `airframes/dexi5.yaml`: with the stock barometer weighting
+the EKF height runs ~1.5 m ahead of the real height during the climb (see SETUP.md).
+
+First cycle, 2026-11-13: takeoff 1.49 m in 6.8 s, centered within 6 cm in 4 s, 10 s hold at
+2 cm, landed 6 s later, 27 s in all.
+
+## Flight bags
+
+`drone/flight_bag.py` records one ROS 2 bag (MCAP) per flight on the companion, from arm to 5 s
+after disarm, in `/home/dexi/flight_bags/<arm time>/`: the tag camera, detections, `tag_nav`
+status and setpoints, PX4 state and pilot sticks, about 2 GB per hour. A paused recorder waits
+while disarmed, so the bag starts at arm with no startup delay. `tools/bag_video.py` renders a
+bag's camera to MP4 with the detection and flight state drawn on.
 
 ## Recording a run
 
@@ -66,11 +91,15 @@ release named after the run, and `notes.md` links to it.
 | `airframes/tag_nav_<airframe>.yaml` | `tag_nav` parameters as flown, including the camera mount offsets |
 | `drone/ch7_center_tag0.py` | waits for CH7 to enter Offboard, then centers on tag 0 and holds until Offboard is left |
 | `drone/endurance_logger.py` | 1 Hz samples and a one-minute summary, written on the companion |
+| `drone/flight_bag.py` | one ROS 2 bag (MCAP) per flight, arm to disarm: tag camera, detections, `tag_nav` setpoints, PX4 state, sticks, IMU |
 | `drone/hgt_watch.py` | 5 Hz EKF height against the rangefinder, with every EKF height-source change logged |
-| `drone/install.sh` | copies the above to the aircraft and starts them |
+| `drone/tag_cycle.py` | one auto takeoff, center, hover, land cycle per CH7 flip (`--now` runs one without CH7; not flown yet) |
+| `drone/install.sh` | copies the above to the aircraft and starts them; `HANDOFF=<script>` picks the CH7 script |
 | `tools/params.py` | dumps or checks PX4 parameters over MAVLink |
 | `tools/params_vs_stock.py` | lists the parameters in a flight log that differ from the stock airframe (needs a PX4 checkout) |
+| `tools/reboot_fc.py` | reboots the flight controller only (refuses if armed); `install.sh` runs it to reconnect PX4 to ROS |
 | `tools/preflight.sh` | parameter check plus companion checks: services, PX4 data, `tag_nav` state, logger |
+| `tools/bag_video.py` | camera video from a flight bag, with the tag outline and flight state drawn on |
 | `tools/build_report.py` | builds `report.html` from a run's `minutes.csv` and `samples.csv` |
 
 ## Notes on the numbers

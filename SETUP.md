@@ -11,12 +11,14 @@
 
 ## Tag and room
 
-- AprilTag **tag36h11, ID 0, printed at 6 in** (the black square, edge to edge). The detector
-  is configured for 0.1524 m; a different print size skews the height and distance to the tag.
+- AprilTag **tag36h11, ID 0, black square 167 mm** edge to edge (measured 2026-11-13). The
+  detector's `size` in the DEXI bringup launch file must match: a wrong size scales every tag
+  distance and height by the same error (the 2026-11-10 run used 0.1524 m, so its tag error
+  reads about 9% low).
 - Tag flat on the floor, under even lighting with no glare on the print.
 - Floor around the tag flat and plain for about 1 m, so the rangefinder and optical flow read
   the floor and not furniture or the tether.
-- Hold height about 1.2 m. At that height the camera sees the tag with margin for the wander.
+- Hold height 1.5 m, the standard for every test so runs compare. At that height the camera sees the tag with margin for the wander.
 
 ## Aircraft
 
@@ -44,11 +46,16 @@ The parameters the test depends on are listed in each airframe profile and check
 | `RC_MAP_OFFB_SW` | 7 | CH7 high enters Offboard, which starts the hold |
 | `EKF2_HGT_REF` | 2 | rangefinder is the height reference: centimeter height over a flat floor |
 | `EKF2_RNG_CTRL` | 2 | always fuse the rangefinder |
-| `EKF2_BARO_CTRL` | 1 | barometer as a backup height source. At 0, with the rangefinder as reference, the EKF resets its height every 5 s and each reset kicks the aircraft up 0.2–0.3 m |
+| `EKF2_BARO_CTRL` | 1 | keep the barometer on. At 0, with the rangefinder as the only height source, PX4 1.16 resets the height every 5 s (range height fusion does not refresh the height timeout; fixed on PX4 main in `14da9d13b5`, not in a release yet) |
+| `EKF2_BARO_NOISE` | 15 | weight the barometer as little as possible. Prop wash makes it read up to 5 m high at liftoff and ~2.8 m high in hover; at the stock 3.5 the EKF height follows it and an `offboard_takeoff` to 1.5 m stopped at a real 0.8 m |
+| `EKF2_TERR_NOISE` | 0.5 | keep the floor estimate steady so the rangefinder corrects the height instead of moving the floor. With this and `EKF2_BARO_NOISE 15`, an EKF replay of the 2026-11-10 log cut the takeoff height error from 1.58 m to 0.18 m, and the next flight reached 1.52 m on the rangefinder for a 1.5 m takeoff |
 | `EKF2_OF_CTRL` | 1 | optical flow fusion |
 | `EKF2_MAG_TYPE` | 5 | magnetometer off; the tag provides the heading |
 | `COM_LOW_BAT_ACT` | 0 | battery warnings only, no failsafe action (tethered runs) |
 | `COM_FLT_TIME_MAX` | -1 | no flight-time limit |
+| `COM_ARM_WO_GPS` | 1 | arm without GPS. A GPS flight can leave it at 0, which denies arming ("Global position estimate required") |
+| `SYS_HAS_GPS`, `EKF2_GPS_CTRL` | 0 | no GPS |
+| `SDLOG_MODE` | 2 | log from boot. A log that starts at arming replays poorly, because the replayed EKF starts cold mid-flight |
 
 ## Companion software
 
@@ -57,6 +64,10 @@ The parameters the test depends on are listed in each airframe profile and check
   `feat/tag-nav-align-yaw`) and one held height for the whole hold (`hold_route_altitude`).
   Both are set in `airframes/tag_nav_dexi5.yaml`. A `tag_nav` without them ignores the keys,
   so check `ros2 param get /tag_nav align_yaw` (preflight does).
+- Two edits to the DEXI bringup launch file on the aircraft (`dexi_bringup_ark_cm4.launch.py`,
+  originals kept beside it): the AprilTag `size` set to the tag (0.167), and the camera throttle
+  that feeds the detector raised from 10 to 20 Hz, so the detector runs at ~15 Hz in flight
+  (every second camera frame) instead of ~8 Hz.
 - Restarting the DEXI stack (`systemctl restart dexi`) can leave PX4's DDS client
   disconnected from the restarted micro-ROS agent: no `/fmu/out` topics, and the LED ring
   stops showing the flight mode. Power cycling the aircraft reconnects it. `tools/preflight.sh`

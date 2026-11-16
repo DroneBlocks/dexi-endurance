@@ -16,10 +16,11 @@ $PY "$HERE/tools/params.py" check "$PROFILE" || fail=1
 
 echo "== companion"
 $SSH true 2>/dev/null && say ok "ssh to $HOST" || { say FAIL "ssh to $HOST"; exit 1; }
-for u in dexi ch7-tag0 endurance-log; do
+for u in dexi ch7-tag0 endurance-log flight-bag; do
   [ "$($SSH systemctl is-active $u)" = active ] && say ok "$u running" || say FAIL "$u not running (drone/install.sh)"
 done
-$SSH "sudo journalctl -u dexi -b -o cat | grep -q 'waiting for hand-off'" && say ok "tag_nav waiting for CH7" || say FAIL "tag_nav not waiting for hand-off"
+# ch7_center_tag0.py parks tag_nav in wait_for_offboard; tag_cycle.py waits for the flip itself
+$SSH "sudo journalctl -u dexi -b -o cat | grep -q 'waiting for hand-off' || sudo journalctl -u ch7-tag0 -b -o cat | grep -q 'READY'" && say ok "hand-off script waiting for CH7" || say FAIL "hand-off script not waiting for CH7"
 $SSH "sudo HOME=/root ROS_DOMAIN_ID=2 bash -c 'source /home/dexi/ros2_jazzy/install/setup.bash; source /home/dexi/dexi_ws/install/setup.bash;
       timeout 8 ros2 topic echo --once /fmu/out/vehicle_status_v1 px4_msgs/msg/VehicleStatus --qos-reliability best_effort --field nav_state' | grep -q '[0-9]'" \
   && say ok "PX4 data reaching ROS" || say FAIL "no PX4 data in ROS (power cycle the aircraft)"
