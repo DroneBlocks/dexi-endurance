@@ -1,6 +1,7 @@
 # DEXI-5 endurance profile: ARK Pi6X flight controller + CM4 companion.
 name: DEXI-5
 host: dexi-295d.local      # mDNS name of this aircraft; override with DEXI_HOST
+ros_domain: 2
 tag_nav_config: tag_nav_dexi5.yaml
 power: external supply, 24.0 V set point, tethered
 tag: {family: tag36h11, id: 0, size_m: 0.167}   # black square edge; the detector's size must match
