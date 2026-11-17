@@ -31,7 +31,17 @@ OFFBOARD = 14
 LAND, DESCEND = 18, 12
 GROUND_M = 0.20      # forced-disarm backstop: height under this ...
 GROUND_S = 6.0       # ... for this long (PX4 normally disarms 3-5 s after touchdown) ...
+# --ground-s S: shorter backstop. DEXI-3 2026-11-16: the EKF velocity ran away 0.2 s after touchdown and
+# PX4, still armed, dragged the aircraft ~0.6 m across the floor before its land detector fired (5.8 s).
+if '--ground-s' in sys.argv: GROUND_S = float(sys.argv[sys.argv.index('--ground-s') + 1])
+# --ground-s S: shorter backstop. DEXI-3 2026-11-16: the EKF velocity ran away 0.2 s after touchdown and
+# PX4, still armed, dragged the aircraft ~0.6 m across the floor before its land detector fired (5.8 s).
+if '--ground-s' in sys.argv: GROUND_S = float(sys.argv[sys.argv.index('--ground-s') + 1])
 LAND_MIN_S = 3.0     # ... and at least this long after the land started
+# --land-min-s S: allow the backstop sooner after the land starts (DEXI-3: 1.0)
+if '--land-min-s' in sys.argv: LAND_MIN_S = float(sys.argv[sys.argv.index('--land-min-s') + 1])
+CENTER_M = 0.05     # land only once the tag reads within this of center ...
+CENTER_WAIT_S = 3.0 # ... waiting up to this long for it after the hold
 # --repeat N: one CH7 flip runs N cycles; between them it waits REST_S on the ground, re-arms
 # itself and goes again. Flip CH7 back to Position at any time to stop after the current step.
 REPEAT = int(sys.argv[sys.argv.index('--repeat') + 1]) if '--repeat' in sys.argv else 1
@@ -116,7 +126,7 @@ def land():
         if not forced and on_ground and time.time() - t0 >= LAND_MIN_S:
             low_since = low_since or time.time()
             if time.time() - low_since >= GROUND_S:
-                log(f"on the ground {GROUND_S:.0f} s (height {s['rng']:.2f} m) and still armed: forced disarm")
+                log(f"on the ground {GROUND_S:.1f} s (height {s['rng']:.2f} m) and still armed: forced disarm")
                 force_disarm(); forced = True
         else:
             low_since = None
@@ -136,6 +146,10 @@ def cycle():
         log('could not center on the tag: holding, take over with CH7'); return False
     if not tn('hold_on_tag', hold_s=HOVER_S):
         log('hold ended early: holding, take over with CH7'); return False
+    # land from the center: keep holding in 0.5 s steps until the tag reads within CENTER_M (max CENTER_WAIT_S)
+    t1 = time.time()
+    while offset_cm() > CENTER_M * 100 and time.time() - t1 < CENTER_WAIT_S:
+        if not tn('hold_on_tag', hold_s=0.5): break
     log(f"landing from {s['rng']:.2f} m, tag offset {offset_cm():.1f} cm")
     last_seen = None
     ok = land()

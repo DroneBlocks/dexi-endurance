@@ -1,17 +1,23 @@
-# DEXI-3 endurance profile. Values marked TODO must be measured on the aircraft
-# before a run; the expected PX4 values come from dexi-fc-params (src/dexi-3.json).
+# DEXI-3 profile: CM5 companion, Pi Cam v2.1 (IMX219) down camera, UWB tag on the FC.
 name: DEXI-3
-host: TODO.local         # mDNS name of the aircraft (dexi-XXXX.local); override with DEXI_HOST
-tag_nav_config: tag_nav_dexi3.yaml   # TODO: create; camera mount offsets measured on the aircraft
-power: TODO (external supply set point, or battery: record capacity and cell count)
-tag: {family: tag36h11, id: 0, size_in: 6}
-hold_height_m: 1.2
+host: dexi-0e6c.local    # mDNS name; override with DEXI_HOST
+ros_domain: 3            # domain 0 is shared with other DEXIs on the network
+mavlink: false           # the UWB tag holds the FC's MAVLink UART: set and check params in QGC over USB
+tag_nav_config: tag_nav_dexi3.yaml   # camera mount offsets measured on the aircraft
+power: battery
+tag: {family: tag36h11, id: 0, size_m: 0.167}   # black square edge; the detector's size must match
+hold_height_m: 1.5
 
+# PX4 parameters the tag cycle depends on. No MAVLink on this airframe, so preflight cannot
+# check them: read them back in QGC before the first flight.
 params:
-  RC_MAP_OFFB_SW: 7
-  EKF2_HGT_REF: 2
-  EKF2_RNG_CTRL: 2
-  EKF2_BARO_CTRL: 1
-  EKF2_OF_CTRL: 1
-  COM_LOW_BAT_ACT: 0      # tethered runs only; leave the dexi-fc-params value for battery runs
-  COM_FLT_TIME_MAX: -1
+  MAV_SYS_ID: 1           # the offboard manager and tag_cycle.py address every command to system 1; any other ID and PX4 ignores Land
+  UXRCE_DDS_DOM_ID: 3     # PX4's ROS domain must match ros_domain above, or the stack (and the LEDs) see no PX4 data
+  RC_MAP_OFFB_SW: 7       # CH7 high = Offboard; entering Offboard starts the cycle
+  EKF2_HGT_REF: 2         # rangefinder is the height reference
+  EKF2_RNG_CTRL: 2        # always fuse the rangefinder
+  EKF2_BARO_CTRL: 1       # barometer as backup; at 0 the EKF resets height every 5 s (PX4 1.16)
+  EKF2_BARO_NOISE: 15.0   # barometer barely weighted: prop wash lifts the baro reading at liftoff
+  EKF2_TERR_NOISE: 0.5    # steady floor estimate so the rangefinder corrects height, not the floor
+  EKF2_OF_CTRL: 1         # optical flow on
+  SDLOG_MODE: 1           # log from boot until disarm, then arm to disarm
