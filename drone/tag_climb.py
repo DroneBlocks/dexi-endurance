@@ -6,6 +6,13 @@ The flight bag records every camera frame and the rangefinder height; dexi-gym's
 eval/tag_climb_score.py runs the detector offline on those frames at every decimate and for both
 tag families, so one flight answers all of them.
 
+Live indicator: the LED ring is green while the onboard detector sees tag36h11 ID 0 (a detection in
+the last LOST_S) and off when it does not; every change is logged with the rangefinder height
+("TAG LOST at 1.62 m"). This is the onboard detector as configured (tag36h11, the bringup's
+decimate: 4 on the CM4), so it shows today's ceiling; the nested tag and other decimates come from
+the offline score. The climb stops by itself once the tag has been gone for LOST_STEPS steps in a
+row (confirming it is not a dropout), or at --top, whichever comes first.
+
 Floor: tag36h11 ID 0 and the nested tagCustom48h12 (ID 0 with ID 1 inside) side by side, centers
 25-30 cm apart, both flat, no glare (print them with tools/make_test_tags.py).
 
@@ -16,7 +23,8 @@ Floor: tag36h11 ID 0 and the nested tagCustom48h12 (ID 0 with ID 1 inside) side 
 
 The run:
   1. offboard_takeoff to START_M, center_on_tag on tag36h11 ID 0 (unless --no-center).
-  2. fly_up STEP_M at a time to --top, holding DWELL_S at every step (height on the rangefinder).
+  2. fly_up STEP_M at a time, holding DWELL_S at every step (height on the rangefinder), until the
+     tag has been gone for LOST_STEPS steps or --top.
   3. fly_down the same steps back to START_M, then PX4 Land straight down (the low end of the
      curve comes from the landing).
 --top is required and must leave at least 1 m to the ceiling. Flow and the rangefinder are the
@@ -29,7 +37,8 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from std_msgs.msg import Bool, String
 from px4_msgs.msg import VehicleStatus, VehicleLocalPosition, VehicleLandDetected
-from dexi_interfaces.srv import FlightCommand, TagNavCommand
+from apriltag_msgs.msg import AprilTagDetectionArray
+from dexi_interfaces.srv import FlightCommand, TagNavCommand, LEDRingColor
 
 if '--top' not in sys.argv:
     sys.exit('usage: tag_climb.py --top <m> [--no-center]   (--top at least 1 m under the ceiling)')
@@ -42,10 +51,13 @@ START_M = 0.8        # tags fit in the frame with margin; below this the landing
 STEP_M = 0.25
 DWELL_S = 3.0        # ~75 frames per step at 25 fps
 OFFBOARD = 14
+LOST_S = 0.5         # no tag 0 detection for this long = tag gone (detector runs ~10 Hz)
+LOST_STEPS = 2       # climb steps with the tag gone the whole dwell before turning around
 
 rclpy.init()
 node = Node('tag_climb')
-s = {'nav': -1, 'armed': False, 'landed': True, 'rng': 0.0, 'tn': {}}
+s = {'nav': -1, 'armed': False, 'landed': True, 'rng': 0.0, 'tn': {}, 'tag_t': 0.0, 'seen': None,
+     'lost_at': None, 'events': []}
 q = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST, depth=1)
 def on_vs(m): s['nav'] = m.nav_state; s['armed'] = m.arming_state == 2
 for t in ('/fmu/out/vehicle_status', '/fmu/out/vehicle_status_v1'):
@@ -53,6 +65,11 @@ for t in ('/fmu/out/vehicle_status', '/fmu/out/vehicle_status_v1'):
 node.create_subscription(VehicleLocalPosition, '/fmu/out/vehicle_local_position_20hz', lambda m: s.__setitem__('rng', m.dist_bottom), q)
 node.create_subscription(VehicleLandDetected, '/fmu/out/vehicle_land_detected', lambda m: s.__setitem__('landed', m.landed), q)
 node.create_subscription(String, '/dexi/tag_nav/status', lambda m: s.__setitem__('tn', json.loads(m.data)), 10)
+def on_det(m):
+    if any(d.id == TAG for d in m.detections):
+        s['tag_t'] = time.time()
+node.create_subscription(AprilTagDetectionArray, '/apriltag_detections', on_det, q)   # best effort matches either QoS
+led = node.create_client(LEDRingColor, '/dexi/led_service/set_led_ring_color')
 engage = node.create_publisher(Bool, '/dexi/tag_nav/engage', 10)
 flight = node.create_client(FlightCommand, '/dexi/flight/command')
 tagnav = node.create_client(TagNavCommand, '/dexi/tag_nav/command')
@@ -78,10 +95,30 @@ def fc(cmd, value=0.0, timeout=0.0):
     return call(flight, r)
 
 
+def set_led(color):
+    if led.service_is_ready():
+        r = LEDRingColor.Request(); r.color = color
+        led.call_async(r)                                 # fire and forget: never block the flight on the LED
+
+
+def watch_tag():
+    """LED green while tag 0 is seen, off when not; log each change with the height."""
+    seen = time.time() - s['tag_t'] < LOST_S
+    if seen == s['seen']:
+        return
+    s['seen'] = seen
+    set_led('green' if seen else 'black')
+    if s['armed']:
+        ev = ('TAG BACK' if seen else 'TAG LOST') + f" at {s['rng']:.2f} m"
+        s['events'].append(ev)
+        log(ev)
+
+
 def spin(sec):
     end = time.time() + sec
     while time.time() < end:
         rclpy.spin_once(node, timeout_sec=0.02)
+        watch_tag()
 
 
 def still_ours():
@@ -89,12 +126,15 @@ def still_ours():
 
 
 def step(cmd):
-    """One fly_up / fly_down step, then the dwell. False when the pilot took over or it failed."""
+    """One fly_up / fly_down step, then the dwell. Returns (still ours, tag seen at any point in the dwell)."""
     if not still_ours() or not fc(cmd, value=STEP_M, timeout=10.0):
-        return False
-    spin(DWELL_S)
-    log(f"dwell done at range {s['rng']:.2f} m")
-    return still_ours()
+        return False, False
+    t0, seen = time.time(), False
+    while time.time() - t0 < DWELL_S:
+        spin(0.05)
+        seen = seen or bool(s['seen'])
+    log(f"dwell done at range {s['rng']:.2f} m, tag {'seen' if seen else 'NOT seen'}")
+    return still_ours(), seen
 
 
 def run():
@@ -107,13 +147,26 @@ def run():
             log('could not center on tag 0: holding, take over with CH7'); return
         engage.publish(Bool(data=False)); spin(0.3)      # tag_nav off: the climb holds on flow
     n = max(0, round((TOP_M - START_M) / STEP_M))
-    log(f'climbing {n} steps of {STEP_M} m to ~{START_M + n * STEP_M:.2f} m')
+    log(f'climbing up to {n} steps of {STEP_M} m (max ~{START_M + n * STEP_M:.2f} m), turning around after '
+        f'{LOST_STEPS} steps without the tag')
+    s['events'] = []
+    up, gone, last_seen_h = 0, 0, None
     for i in range(n):
-        if not step('fly_up'):
+        ok, seen = step('fly_up')
+        if not ok:
             log('climb stopped: take over with CH7'); return
-    log(f"top: range {s['rng']:.2f} m")
-    for i in range(n):
-        if not step('fly_down'):
+        up += 1
+        if seen:
+            gone, last_seen_h = 0, s['rng']
+        else:
+            gone += 1
+            if gone >= LOST_STEPS:
+                break
+    log(f"top: range {s['rng']:.2f} m; last step with the tag: {last_seen_h if last_seen_h is None else round(last_seen_h, 2)} m")
+    log('tag events on the climb: ' + ('; '.join(s['events']) or 'none'))
+    for i in range(up):
+        ok, _ = step('fly_down')
+        if not ok:
             log('descent stopped: take over with CH7'); return
     fc('land', timeout=30.0)
     log('landed' if not s['armed'] else 'land returned with the aircraft still armed: take over')

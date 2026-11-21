@@ -74,8 +74,10 @@ dexi-gym prediction (`notes/tag-altitude-nested.md` there). One flight per camer
    ```
    An airframe without a tag_nav config (DEXI-3 today) adds `--no-center` and starts over the tags.
 4. Preflight, arm in Position on the ground between the tags, flip CH7. It takes off to 0.8 m,
-   centers on tag 0, climbs in 0.25 m steps with 3 s at each to `--top`, comes back down the same
-   way and lands. Flip CH7 back to take over at any time.
+   centers on tag 0, climbs in 0.25 m steps with 3 s at each, comes back down the same way and
+   lands. **LED ring green = the drone sees tag 0, off = it lost it**; the log prints each change
+   with the height ("TAG LOST at 1.62 m"). It turns around by itself after two steps in a row
+   without the tag, or at `--top`. Flip CH7 back to take over at any time.
 5. Score the bag in dexi-gym (Windows or Mac, not WSL):
    ```bash
    python eval/tag_climb_score.py <bag dir> --cam picam21 --tag36-size <m> --ring-size <m>        --json eval/results/tag_climb/<date>_<airframe>.json
