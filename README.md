@@ -60,6 +60,27 @@ the EKF height runs ~1.5 m ahead of the real height during the climb (see SETUP.
 First cycle, 2026-11-13: takeoff 1.49 m in 6.8 s, centered within 6 cm in 4 s, 10 s hold at
 2 cm, landed 6 s later, 27 s in all.
 
+## Tag ceiling test
+
+How high the down camera still reads a tag, for tag36h11 and a nested tagCustom48h12, against the
+dexi-gym prediction (`notes/tag-altitude-nested.md` there). One flight per camera.
+
+1. Print both tags at 100% (`tools/make_test_tags.py`, see its header), check the 100 mm bar, and
+   measure the black square and the nested tag's black ring.
+2. Lay them flat side by side, centers 25-30 cm apart, tag36h11 ID 0 on the left, no glare.
+3. Install with the climb as the hand-off. `--top` is required: at least 1 m under the ceiling.
+   ```bash
+   HANDOFF="tag_climb.py --top 3.5" drone/install.sh airframes/dexi5.yaml
+   ```
+   An airframe without a tag_nav config (DEXI-3 today) adds `--no-center` and starts over the tags.
+4. Preflight, arm in Position on the ground between the tags, flip CH7. It takes off to 0.8 m,
+   centers on tag 0, climbs in 0.25 m steps with 3 s at each to `--top`, comes back down the same
+   way and lands. Flip CH7 back to take over at any time.
+5. Score the bag in dexi-gym (Windows or Mac, not WSL):
+   ```bash
+   python eval/tag_climb_score.py <bag dir> --cam picam21 --tag36-size <m> --ring-size <m>        --json eval/results/tag_climb/<date>_<airframe>.json
+   ```
+
 ## Flight bags
 
 `drone/flight_bag.py` records one ROS 2 bag (MCAP) per flight on the companion, from arm to 5 s
