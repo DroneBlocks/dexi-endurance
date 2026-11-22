@@ -60,6 +60,36 @@ the EKF height runs ~1.5 m ahead of the real height during the climb (see SETUP.
 First cycle, 2026-11-13: takeoff 1.49 m in 6.8 s, centered within 6 cm in 4 s, 10 s hold at
 2 cm, landed 6 s later, 27 s in all.
 
+`--repeat N` flies N cycles from one CH7 flip, re-arming itself after a 15 s rest.
+
+### DEXI-3
+
+```bash
+NORESTART=1 HANDOFF="tag_cycle.py --repeat 10 --ground-s 0.3 --land-min-s 1.0" \
+  drone/install.sh airframes/dexi3.yaml
+```
+
+- `--ground-s 0.3 --land-min-s 1.0`: at touchdown flow and range drop out and the EKF velocity
+  runs away; with PX4's land detector (5.8 s) the still-armed aircraft skidded up to 0.6 m.
+  The forced disarm 0.3 s after it is under 0.2 m stops that.
+- Before landing the cycle keeps holding (up to 3 s) until the tag reads within 5 cm.
+- `ros_domain`: each aircraft on a shared network needs its own ROS domain, and the flight
+  controller's `UXRCE_DDS_DOM_ID` must match, or the stack (and the LED ring) sees no PX4 data.
+- `mavlink: false`: no MAVLink to the flight controller (a UWB tag holds that UART), so the
+  installer skips the FC reboot and preflight skips the parameter check. Set and check the
+  profile's parameters in QGC over USB. `MAV_SYS_ID` must be 1: every ROS command is addressed
+  to system 1.
+- `NORESTART=1` starts the test units on the running stack. The units do not survive a power
+  cycle; re-run it after one.
+- Preflight checks that PX4 is receiving the offboard heartbeat. If it is not, power cycle.
+
+2026-11-16, DEXI-3 with a Pi Cam v2.1: four cycles in a row, hold 1-5 cm, landing started
+1-3 cm from the tag, disarm 0.3 s after touchdown.
+
+2026-11-17: six cycles in a row, hold 5-14 cm, landing started 2-5 cm from the tag. The seventh
+arm was refused: PX4's horizontal position uncertainty on the ground (0.68 m) passed this
+aircraft's `COM_POS_FS_EPH` 0.5, which blocks Offboard. The DEXI-5 runs 5.0.
+
 ## Flight bags
 
 `drone/flight_bag.py` records one ROS 2 bag (MCAP) per flight on the companion, from arm to 5 s
