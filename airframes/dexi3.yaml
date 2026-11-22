@@ -20,4 +20,5 @@ params:
   EKF2_BARO_NOISE: 15.0   # barometer barely weighted: prop wash lifts the baro reading at liftoff
   EKF2_TERR_NOISE: 0.5    # steady floor estimate so the rangefinder corrects height, not the floor
   EKF2_OF_CTRL: 1         # optical flow on
+  COM_POS_FS_EPH: 5.0     # flow-only position uncertainty grows on the ground; at 0.5 PX4 refused the 7th arm (DEXI-5 runs 5.0)
   SDLOG_MODE: 1           # log from boot until disarm, then arm to disarm
