@@ -86,6 +86,10 @@ NORESTART=1 HANDOFF="tag_cycle.py --repeat 10 --ground-s 0.3 --land-min-s 1.0" \
 2026-11-16, DEXI-3 with a Pi Cam v2.1: four cycles in a row, hold 1-5 cm, landing started
 1-3 cm from the tag, disarm 0.3 s after touchdown.
 
+2026-11-17: six cycles in a row, hold 5-14 cm, landing started 2-5 cm from the tag. The seventh
+arm was refused: PX4's horizontal position uncertainty on the ground (0.68 m) passed this
+aircraft's `COM_POS_FS_EPH` 0.5, which blocks Offboard. The DEXI-5 runs 5.0.
+
 ## Flight bags
 
 `drone/flight_bag.py` records one ROS 2 bag (MCAP) per flight on the companion, from arm to 5 s

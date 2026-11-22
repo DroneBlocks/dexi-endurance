@@ -27,6 +27,8 @@ from dexi_interfaces.srv import FlightCommand, TagNavCommand
 TAG = 0
 TAKEOFF_M = 1.5      # standard test height
 HOVER_S = 10.0
+# --hover-s S: hold length (endurance: 3600)
+if '--hover-s' in sys.argv: HOVER_S = float(sys.argv[sys.argv.index('--hover-s') + 1])
 OFFBOARD = 14
 LAND, DESCEND = 18, 12
 GROUND_M = 0.20      # forced-disarm backstop: height under this ...
