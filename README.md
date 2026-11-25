@@ -123,6 +123,7 @@ release named after the run, and `notes.md` links to it.
 | `drone/endurance_logger.py` | 1 Hz samples and a one-minute summary, written on the companion |
 | `drone/flight_bag.py` | one ROS 2 bag (MCAP) per flight, arm to disarm: tag camera, detections, `tag_nav` setpoints, PX4 state, sticks, IMU |
 | `drone/hgt_watch.py` | 5 Hz EKF height against the rangefinder, with every EKF height-source change logged |
+| `drone/tag_unattended.py` | network start, no transmitter: arm, take off, center and hold on a tag; lands on tag loss (`--loss`, 5 s), hover time (`--hover`) or SIGTERM. Flown 2026-11-25 on the nested pad, tag 8 |
 | `drone/tag_cycle.py` | one auto takeoff, center, hover, land cycle per CH7 flip (`--now` runs one without CH7; not flown yet) |
 | `drone/install.sh` | copies the above to the aircraft and starts them; `HANDOFF=<script>` picks the CH7 script |
 | `tools/params.py` | dumps or checks PX4 parameters over MAVLink |
