@@ -22,7 +22,8 @@ SSH="sshpass -p ${DEXI_PASS:-dexi} ssh -o StrictHostKeyChecking=no -o UserKnownH
 SCP="sshpass -p ${DEXI_PASS:-dexi} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
 [ -f "$HERE/airframes/$TAGCFG" ] || { echo "missing airframes/$TAGCFG (measure the camera mount first)"; exit 1; }
-$SCP "$HERE"/drone/*.py "dexi@$HOST:/home/dexi/"
+$SCP "$HERE"/drone/*.py "$HERE"/drone/*.sh "dexi@$HOST:/home/dexi/"
+$SSH "chmod +x /home/dexi/run_ros.sh"
 $SCP "$HERE/airframes/$TAGCFG" "dexi@$HOST:/tmp/$TAGCFG"
 $SSH "sudo cp /tmp/$TAGCFG /home/dexi/dexi_ws/install/dexi_apriltag/share/dexi_apriltag/config/$TAGCFG"
 # Turn tag_nav on with this airframe's config in the user config the DEXI stack reads first

@@ -90,6 +90,28 @@ NORESTART=1 HANDOFF="tag_cycle.py --repeat 10 --ground-s 0.3 --land-min-s 1.0" \
 arm was refused: PX4's horizontal position uncertainty on the ground (0.68 m) passed this
 aircraft's `COM_POS_FS_EPH` 0.5, which blocks Offboard. The DEXI-5 runs 5.0.
 
+## Unattended tag hold
+
+`drone/tag_unattended.py` flies with no transmitter input: arm, take off, center on the tag, hold,
+and land on tag loss (`--loss`, 5 s), hover time (`--hover`) or a land request. Start and stop it
+from the laptop with `tools/unattended.sh` (needs `drone/install.sh` first, and CH7 low):
+
+```bash
+tools/unattended.sh airframes/dexi5.yaml start --tag 8 --hover 180   # nested pad
+tools/unattended.sh airframes/dexi5.yaml land                         # land now
+```
+
+Three layers land it if something dies, each tested on purpose in a low hover:
+
+| What fails | What lands it | Test |
+|---|---|---|
+| tag unseen, or `tag_nav` stops reporting | the script, after `--loss` s | cover the tag (flown 2026-11-25: Land 5.0 s after) |
+| the script itself (crash, SIGKILL) | `land_if_armed.py`, the unit's ExecStopPost, Land straight to PX4 | `tools/unattended.sh ... kill` mid-hold |
+| flight manager, ROS or the CM4 (setpoints stop) | PX4 offboard loss, `COM_OBL_RC_ACT 4`: holds 5 s, then Land | `sudo pkill -f px4_offboard_manager` mid-hold, then restart `dexi` and reboot the FC as `install.sh` does |
+
+Flying with the transmitter off also needs RC loss excepted in Offboard and arming without RC;
+those are not set yet.
+
 ## Flight bags
 
 `drone/flight_bag.py` records one ROS 2 bag (MCAP) per flight on the companion, from arm to 5 s
@@ -125,10 +147,13 @@ release named after the run, and `notes.md` links to it.
 | `drone/hgt_watch.py` | 5 Hz EKF height against the rangefinder, with every EKF height-source change logged |
 | `drone/tag_unattended.py` | network start, no transmitter: arm, take off, center and hold on a tag; lands on tag loss (`--loss`, 5 s), hover time (`--hover`) or SIGTERM. Flown 2026-11-25 on the nested pad, tag 8 |
 | `drone/tag_cycle.py` | one auto takeoff, center, hover, land cycle per CH7 flip (`--now` runs one without CH7; not flown yet) |
+| `drone/land_if_armed.py` | backstop: lands the aircraft if it is armed in Offboard after `tag_unattended.py` ends |
+| `drone/run_ros.sh` | runs a script with the ROS environment, for systemd |
 | `drone/install.sh` | copies the above to the aircraft and starts them; `HANDOFF=<script>` picks the CH7 script |
 | `tools/params.py` | dumps or checks PX4 parameters over MAVLink |
 | `tools/params_vs_stock.py` | lists the parameters in a flight log that differ from the stock airframe (needs a PX4 checkout) |
 | `tools/reboot_fc.py` | reboots the flight controller only (refuses if armed); `install.sh` runs it to reconnect PX4 to ROS |
+| `tools/unattended.sh` | start, land, kill (failsafe test) or follow `tag_unattended.py` on the aircraft |
 | `tools/preflight.sh` | parameter check plus companion checks: services, PX4 data, `tag_nav` state, logger |
 | `tools/bag_video.py` | camera video from a flight bag, with the tag outline and flight state drawn on |
 | `tools/build_report.py` | builds `report.html` from a run's `minutes.csv` and `samples.csv` |

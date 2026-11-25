@@ -25,6 +25,12 @@ params:
   EKF2_GPS_CTRL: 0        # GPS fusion off
   COM_LOW_BAT_ACT: 0      # warn only; a tethered supply must not trigger a battery failsafe
   COM_FLT_TIME_MAX: -1    # no flight-time limit
+  # Offboard loss (flight manager, ROS or the CM4 gone, setpoints stop): Land, not the stock Position.
+  # Unattended there is no pilot to take Position; attended, CH7 still takes it back. Names and values
+  # checked against PX4 commander_params.yaml (main); confirm on the aircraft with tools/params.py check.
+  COM_OBL_RC_ACT: 4       # offboard loss -> Land
+  COM_OF_LOSS_T: 1.0      # s without setpoints before offboard counts as lost
+  COM_FAIL_ACT_T: 5.0     # s PX4 holds before the failsafe action (stock); a 1.5 m hover lands 6 s after loss
   # Attitude and rate gains from PX4 autotune, 2026-11-13, on the 6S 4000 mAh Li-ion pack (strapped tight).
   # The stock 4601 airframe gains gave a pitch-only 8-9 Hz shake on battery. Diff: airframes/dexi5-tune.md
   MC_ROLLRATE_P: 0.0498
